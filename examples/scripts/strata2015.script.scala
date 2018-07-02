@@ -23,11 +23,13 @@ import water.support.{H2OFrameSupport, SparkContextSupport, ModelMetricsSupport}
 import water.support.H2OFrameSupport._
 
 // Create SQL support
+println("Create SQL support")
 implicit val sqlContext = spark.sqlContext
 import sqlContext.implicits._
 import water.api.TestUtils
 
 // Start H2O services
+println("Create H2O support")
 implicit val h2oContext = H2OContext.getOrCreate(sc)
 import h2oContext._
 import h2oContext.implicits._
@@ -43,6 +45,7 @@ SparkContextSupport.addFiles(sc, TestUtils.locate(location + "31081_New_York_Cit
 val dataFiles = filesPaths.map(path => new java.io.File(path).toURI)
 val bikesDF = new H2OFrame(dataFiles:_*)
 
+println("Update the bikes dataframe")
 withLockAndUpdate(bikesDF){ fr =>
   // Rename columns and remove all spaces in header
   val colNames = fr.names().map( n => n.replace(' ', '_'))
@@ -56,6 +59,7 @@ withLockAndUpdate(bikesDF){ fr =>
 // Select column 'startime'
 val startTimeF = bikesDF('starttime)
 // Add a new column
+println("Before doIt")
 bikesDF.add(new TimeSplit().doIt(startTimeF))
 // Do not forget to update frame in K/V store
 bikesDF.update()
@@ -63,9 +67,12 @@ bikesDF.update()
 //
 // Transform H2OFrame into DataFrame
 //
+println("Convert bikes to rdd")
+
 val bikesRdd = asDataFrame(bikesDF)
 
 // Register table and SQL table
+println("Convert temp table")
 bikesRdd.createOrReplaceTempView("bikesRdd")
 
 //
@@ -133,6 +140,7 @@ def buildModel(df: H2OFrame, trees: Int = 100, depth: Int = 6)(implicit h2oConte
 //
 // Build a model
 //
+println("val result1 = buildModel(finalBikeDF)")
 val result1 = buildModel(finalBikeDF)
 
 // Load weather data in NY 2013
@@ -143,10 +151,12 @@ val weatherRdd = weatherData.map(_.split(",")).
   filter(!_.isWrongRow()).
   filter(_.HourLocal == Some(12)).setName("weather").cache()
 
+println("Join with bike table")
 
 // Join with bike table
 weatherRdd.toDF.createOrReplaceTempView("weatherRdd")
 asDataFrame(finalBikeDF).createOrReplaceTempView("bikesRdd")
+
 
 val bikesWeatherRdd = sqlContext.sql(
     """SELECT b.Days, b.start_station_id, b.bikes,
