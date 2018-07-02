@@ -159,6 +159,8 @@ val bikesWeatherRdd = sqlContext.sql(
     """.stripMargin)
 
 // And make prediction again but now on RDD
+println("Building the model")
 val result2 = buildModel(bikesWeatherRdd)
 
+println("Stopping H2O Context")
 h2oContext.stop()
